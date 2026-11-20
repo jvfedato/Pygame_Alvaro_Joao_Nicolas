@@ -99,7 +99,8 @@ class Jogo:
 
         # Só mostra o taco quando dá para tacar
         if self.todas_paradas():
-            self.taco.desenhar(self.tela, self.bola_branca, pygame.mouse.get_pos())
+            self.taco.desenhar(self.tela, self.bola_branca, pygame.mouse.get_pos(),
+                               self.bolas, self.mesa.rect_pano)
 
         texto = self.fonte.render(f"Tacadas: {self.tacadas}", True, BRANCO)
         self.tela.blit(texto, (20, 20))
