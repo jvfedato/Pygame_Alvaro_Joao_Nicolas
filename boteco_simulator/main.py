@@ -8,7 +8,8 @@ Cada fase vencida dá moedas.
 """
 
 import pygame
-from config import LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, AMARELO, PRETO
+from config import (LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, AMARELO, PRETO, 
+                    PASSOS_POR_QUADRO)
 from mesa import Mesa
 from taco import Taco
 from desafios import criar_fases, POSICAO_BRANCA
@@ -74,24 +75,32 @@ class Jogo:
                     self.numero_fase = (self.numero_fase + 1) % len(self.fases)
                 self.comecar_fase()
 
-    def atualizar(self):
+        def atualizar(self):
         """Move as bolas, vê o que caiu e confere se a fase acabou."""
-        for bola in self.bolas:
-            if bola.encacapada:
-                continue
-            bola.atualizar()
-            # Primeiro vê se caiu na caçapa; se não caiu, testa a tabela
-            cacapa = self.mesa.verificar_cacapa(bola)
-            if cacapa is None:
-                if self.mesa.colidir_tabelas(bola):
-                    bola.tabelas += 1
-            elif bola != self.bola_branca:
-                self.desafio.bola_caiu(bola, cacapa)
+        # Em vez de andar o quadro inteiro de uma vez, as bolas andam em
+        # vários passinhos. Assim, numa tacada forte, a branca não "pula"
+        # para dentro da outra bola e o choque sai na direção certa.
+        for passo in range(PASSOS_POR_QUADRO):
+            for bola in self.bolas:
+                if bola.encacapada:
+                    continue
+                bola.mover(1 / PASSOS_POR_QUADRO)
+                # Primeiro vê se caiu na caçapa; se não caiu, testa a tabela
+                cacapa = self.mesa.verificar_cacapa(bola)
+                if cacapa is None:
+                    if self.mesa.colidir_tabelas(bola):
+                        bola.tabelas += 1
+                elif bola != self.bola_branca:
+                    self.desafio.bola_caiu(bola, cacapa)
 
-        # Testa cada par de bolas uma única vez
-        for i in range(len(self.bolas)):
-            for j in range(i + 1, len(self.bolas)):
-                Mesa.colidir_bolas(self.bolas[i], self.bolas[j])
+            # Testa cada par de bolas uma única vez
+            for i in range(len(self.bolas)):
+                for j in range(i + 1, len(self.bolas)):
+                    Mesa.colidir_bolas(self.bolas[i], self.bolas[j])
+
+        # O atrito é aplicado uma vez por quadro, depois dos passinhos
+        for bola in self.bolas:
+            bola.frear()
 
         # Depois da tacada, quando tudo parar, confere o resultado
         if self.tacou and self.todas_paradas():
@@ -107,6 +116,7 @@ class Jogo:
                 self.moedas += self.desafio.recompensa
             elif self.desafio.perdeu():
                 self.estado = "perdeu"
+
 
     def desenhar_texto(self, texto, fonte, cor, x, y):
         """Escreve um texto com o centro no ponto (x, y)."""
