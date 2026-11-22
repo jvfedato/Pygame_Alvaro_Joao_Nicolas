@@ -30,6 +30,8 @@ class Bola:
         self.numero = numero
         self.raio = RAIO_BOLA
         self.encacapada = False           # vira True quando cai na caçapa
+        self.tabelas = 0                  # quantas vezes bateu na tabela nesta tacada
+
 
     def esta_parada(self):
         """Retorna True se a bola estiver parada (ou já encaçapada)."""
