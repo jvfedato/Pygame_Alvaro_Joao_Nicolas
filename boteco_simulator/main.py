@@ -75,7 +75,7 @@ class Jogo:
                     self.numero_fase = (self.numero_fase + 1) % len(self.fases)
                 self.comecar_fase()
 
-        def atualizar(self):
+    def atualizar(self):
         """Move as bolas, vê o que caiu e confere se a fase acabou."""
         # Em vez de andar o quadro inteiro de uma vez, as bolas andam em
         # vários passinhos. Assim, numa tacada forte, a branca não "pula"
