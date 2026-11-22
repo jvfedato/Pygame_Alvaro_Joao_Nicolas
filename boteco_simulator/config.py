@@ -17,7 +17,7 @@ RAIO_CACAPA = 22             # raio das caçapas (buracos)
 
 # ---------------- Bolas ----------------
 RAIO_BOLA = 11               # raio de cada bola em pixels
-ATRITO = 0.985               # a cada quadro a velocidade é multiplicada por isso (perde 1,5%)
+ATRITO = 0.97               # a cada quadro a velocidade é multiplicada por isso (perde 1,5%)
 VELOCIDADE_MINIMA = 0.05     # abaixo disso consideramos a bola parada
 PERDA_TABELA = 0.8           # ao bater na tabela a bola mantém 80% da velocidade
 PASSOS_POR_QUADRO = 10
