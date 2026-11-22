@@ -30,20 +30,25 @@ class Bola:
         self.numero = numero
         self.raio = RAIO_BOLA
         self.encacapada = False           # vira True quando cai na caçapa
-        self.tabelas = 0                  # quantas vezes bateu na tabela nesta tacada
-
+        
 
     def esta_parada(self):
         """Retorna True se a bola estiver parada (ou já encaçapada)."""
         return self.encacapada or self.vel.length() == 0
 
-    def atualizar(self):
-        """Move a bola um quadro e aplica o atrito do pano."""
+    def mover(self, fracao):
+        """
+        Anda um pedaço do caminho do quadro.
+
+        Args:
+            fracao (float): que pedaço do quadro andar (ex.: 0.1 = um décimo).
+        """
+        self.pos += self.vel * fracao
+
+    def frear(self):
+        """Aplica o atrito do pano (uma vez por quadro)."""
         if self.encacapada:
             return
-
-        # Anda na direção da velocidade
-        self.pos += self.vel
 
         # Atrito: a velocidade diminui um pouco a cada quadro
         self.vel *= ATRITO
@@ -51,7 +56,7 @@ class Bola:
         # Se ficou muito lenta, para de vez (senão ela "andaria" para sempre)
         if self.vel.length() < VELOCIDADE_MINIMA:
             self.vel = pygame.Vector2(0, 0)
-
+            
     def desenhar(self, tela, fonte):
         """
         Desenha a bola na tela.
