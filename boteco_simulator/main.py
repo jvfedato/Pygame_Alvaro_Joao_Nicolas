@@ -3,92 +3,115 @@ Boteco Simulator - arquivo principal.
 
 Execute este arquivo para jogar:  python main.py
 
-Nesta etapa 1 temos: a mesa, as bolas, a física e a tacada com o mouse.
-Nas próximas etapas vamos adicionar desafios, moedas, loja, telas e sons.
+Etapa 2: o jogo agora é uma sequência de desafios (fases).
+Cada fase vencida dá moedas.
 """
 
 import pygame
-from config import LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, CORES_BOLAS, RAIO_BOLA
-from bola import Bola
+from config import LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, AMARELO, PRETO
 from mesa import Mesa
 from taco import Taco
+from desafios import criar_fases, POSICAO_BRANCA
 
 
 class Jogo:
-    """Junta tudo: janela, mesa, bolas, taco e o loop principal."""
+    """Junta tudo: janela, mesa, taco, fases e o loop principal."""
 
     def __init__(self):
-        """Inicia o pygame, cria a janela e monta a mesa."""
+        """Inicia o pygame, cria a janela e começa a primeira fase."""
         pygame.init()
         self.tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
         pygame.display.set_caption(TITULO)
-        self.relogio = pygame.time.Clock()        # controla o FPS
+        self.relogio = pygame.time.Clock()
         self.fonte_bola = pygame.font.SysFont("arial", 10, bold=True)
-        self.fonte = pygame.font.SysFont("arial", 20, bold=True)
+        self.fonte = pygame.font.SysFont("arial", 18, bold=True)
+        self.fonte_grande = pygame.font.SysFont("arial", 40, bold=True)
 
         self.mesa = Mesa()
         self.taco = Taco()
         self.rodando = True
-        self.tacadas = 0
-        self.montar_bolas()
 
-    def montar_bolas(self):
-        """Coloca a bola branca e as bolas numeradas num triângulo."""
-        pano = self.mesa.rect_pano
-        # Bola branca a 1/4 da mesa, na altura do meio
-        self.bola_branca = Bola(pano.left + pano.width * 0.25, pano.centery, BRANCO, 0)
-        self.bolas = [self.bola_branca]
+        self.fases = criar_fases()
+        self.numero_fase = 0      # índice da fase atual na lista
+        self.moedas = 0
+        self.comecar_fase()
 
-        # Triângulo: fileira 1 tem 1 bola, fileira 2 tem 2... até 4 fileiras (10 lugares)
-        x_inicio = pano.left + pano.width * 0.7
-        numero = 1
-        for fileira in range(4):
-            for i in range(fileira + 1):
-                if numero > 8:
-                    break
-                x = x_inicio + fileira * (RAIO_BOLA * 2 - 2)
-                y = pano.centery + (i - fileira / 2) * (RAIO_BOLA * 2 + 1)
-                self.bolas.append(Bola(x, y, CORES_BOLAS[numero], numero))
-                numero += 1
+    def comecar_fase(self):
+        """Coloca as bolas da fase atual na mesa."""
+        self.desafio = self.fases[self.numero_fase]
+        self.bolas = self.desafio.comecar()
+        self.bola_branca = self.bolas[0]
+        self.estado = "jogando"   # pode ser "jogando", "venceu" ou "perdeu"
+        self.tacou = False        # True depois da tacada, até as bolas pararem
 
     def todas_paradas(self):
         """Retorna True se nenhuma bola estiver se mexendo."""
-        return all(b.esta_parada() for b in self.bolas)
+        for bola in self.bolas:
+            if not bola.esta_parada():
+                return False
+        return True
 
     def tratar_eventos(self):
         """Lê teclado e mouse."""
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 self.rodando = False
-            # Só deixamos tacar quando tudo parou
-            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                if self.todas_paradas():
+
+            elif self.estado == "jogando":
+                if evento.type == pygame.MOUSEBUTTONDOWN and self.todas_paradas():
                     self.taco.comecar_carga()
-            elif evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
-                if self.taco.carregando:
+                elif evento.type == pygame.MOUSEBUTTONUP and self.taco.carregando:
                     if self.taco.tacar(self.bola_branca, pygame.mouse.get_pos()):
-                        self.tacadas += 1
+                        self.desafio.tacadas_restantes -= 1
+                        self.tacou = True
+                        for bola in self.bolas:
+                            bola.tabelas = 0      # zera a contagem de tabelas
 
-    def atualizar_fisica(self):
-        """Move as bolas e resolve todas as colisões."""
+            # Fase acabou: ENTER continua
+            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+                if self.estado == "venceu":
+                    # vai para a próxima fase (depois da última, volta para a primeira)
+                    self.numero_fase = (self.numero_fase + 1) % len(self.fases)
+                self.comecar_fase()
+
+    def atualizar(self):
+        """Move as bolas, vê o que caiu e confere se a fase acabou."""
         for bola in self.bolas:
+            if bola.encacapada:
+                continue
             bola.atualizar()
-            self.mesa.colidir_tabelas(bola)
+            # Primeiro vê se caiu na caçapa; se não caiu, testa a tabela
+            cacapa = self.mesa.verificar_cacapa(bola)
+            if cacapa is None:
+                if self.mesa.colidir_tabelas(bola):
+                    bola.tabelas += 1
+            elif bola != self.bola_branca:
+                self.desafio.bola_caiu(bola, cacapa)
 
-        # Testa cada par de bolas uma única vez (i com j, sendo j > i)
+        # Testa cada par de bolas uma única vez
         for i in range(len(self.bolas)):
             for j in range(i + 1, len(self.bolas)):
                 Mesa.colidir_bolas(self.bolas[i], self.bolas[j])
 
-        for bola in self.bolas:
-            if not bola.encacapada:
-                self.mesa.verificar_cacapa(bola)
+        # Depois da tacada, quando tudo parar, confere o resultado
+        if self.tacou and self.todas_paradas():
+            self.tacou = False
 
-        # Se a branca caiu, ela volta para o ponto inicial
-        if self.bola_branca.encacapada and self.todas_paradas():
-            pano = self.mesa.rect_pano
-            self.bola_branca.encacapada = False
-            self.bola_branca.pos = pygame.Vector2(pano.left + pano.width * 0.25, pano.centery)
+            # Se a branca caiu, ela volta para o começo
+            if self.bola_branca.encacapada:
+                self.bola_branca.encacapada = False
+                self.bola_branca.pos = pygame.Vector2(POSICAO_BRANCA)
+
+            if self.desafio.venceu():
+                self.estado = "venceu"
+                self.moedas += self.desafio.recompensa
+            elif self.desafio.perdeu():
+                self.estado = "perdeu"
+
+    def desenhar_texto(self, texto, fonte, cor, x, y):
+        """Escreve um texto com o centro no ponto (x, y)."""
+        imagem = fonte.render(texto, True, cor)
+        self.tela.blit(imagem, imagem.get_rect(center=(x, y)))
 
     def desenhar(self):
         """Desenha tudo na tela."""
@@ -97,21 +120,35 @@ class Jogo:
         for bola in self.bolas:
             bola.desenhar(self.tela, self.fonte_bola)
 
-        # Só mostra o taco quando dá para tacar
-        if self.todas_paradas():
+        if self.estado == "jogando" and self.todas_paradas():
             self.taco.desenhar(self.tela, self.bola_branca, pygame.mouse.get_pos(),
                                self.bolas, self.mesa.rect_pano)
 
-        texto = self.fonte.render(f"Tacadas: {self.tacadas}", True, BRANCO)
-        self.tela.blit(texto, (20, 20))
-        pygame.display.flip()   # mostra na tela o que foi desenhado
+        # Informações no topo da tela
+        titulo = f"Fase {self.numero_fase + 1}: {self.desafio.descricao}"
+        self.tela.blit(self.fonte.render(titulo, True, BRANCO), (20, 20))
+        info = f"Tacadas: {self.desafio.tacadas_restantes}    Moedas: {self.moedas}"
+        self.tela.blit(self.fonte.render(info, True, AMARELO), (700, 20))
+
+        # Caixa de fim de fase
+        if self.estado != "jogando":
+            pygame.draw.rect(self.tela, PRETO, (250, 200, 500, 200), border_radius=12)
+            if self.estado == "venceu":
+                self.desenhar_texto("Desafio cumprido!", self.fonte_grande, AMARELO, 500, 260)
+                self.desenhar_texto(f"+{self.desafio.recompensa} moedas", self.fonte, BRANCO, 500, 310)
+                self.desenhar_texto("ENTER para a próxima fase", self.fonte, BRANCO, 500, 350)
+            else:
+                self.desenhar_texto("Não foi dessa vez...", self.fonte_grande, BRANCO, 500, 270)
+                self.desenhar_texto("ENTER para tentar de novo", self.fonte, BRANCO, 500, 340)
+
+        pygame.display.flip()
 
     def executar(self):
         """Loop principal: eventos -> atualização -> desenho, 60 vezes por segundo."""
         while self.rodando:
             self.tratar_eventos()
             self.taco.atualizar()
-            self.atualizar_fisica()
+            self.atualizar()
             self.desenhar()
             self.relogio.tick(FPS)
         pygame.quit()
