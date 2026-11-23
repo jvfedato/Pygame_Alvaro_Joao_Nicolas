@@ -18,9 +18,9 @@ class Sons:
 
     def __init__(self):
         """Carrega os efeitos sonoros e prepara a música."""
-        self.tacada = pygame.mixer.Sound(os.path.join(PASTA_SONS, "tacada.mp3"))
-        self.cacapa = pygame.mixer.Sound(os.path.join(PASTA_SONS, "cacapa.mp3"))
-        self.vitoria = pygame.mixer.Sound(os.path.join(PASTA_SONS, "vitoria.mp3"))
+        self.tacada = pygame.mixer.Sound(os.path.join(PASTA_SONS, "tacada.wav"))
+        self.cacapa = pygame.mixer.Sound(os.path.join(PASTA_SONS, "cacapa.wav"))
+        self.vitoria = pygame.mixer.Sound(os.path.join(PASTA_SONS, "vitoria.wav"))
 
         pygame.mixer.music.load(os.path.join(PASTA_SONS, "musica.mp3"))
         pygame.mixer.music.set_volume(0.3)     # música baixinha (0 a 1)
