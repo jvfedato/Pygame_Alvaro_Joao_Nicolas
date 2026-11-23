@@ -130,8 +130,8 @@ class Jogo:
                 if cacapa is None:
                     if self.mesa.colidir_tabelas(bola):
                         bola.tabelas += 1
-                    else:
-                        self.sons.cacapa.play()            # alguma bola caiu
+                else:
+                    self.sons.cacapa.play()            # alguma bola caiu
                     if bola != self.bola_branca:
                         self.desafio.bola_caiu(bola, cacapa)
 
