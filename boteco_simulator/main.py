@@ -3,23 +3,24 @@ Boteco Simulator - arquivo principal.
 
 Execute este arquivo para jogar:  python main.py
 
-Etapa 2: o jogo agora é uma sequência de desafios (fases).
-Cada fase vencida dá moedas.
+Etapa 3: o jogo agora tem telas. Começa no menu, tem uma tela de
+instruções, as fases e uma tela de fim de jogo.
 """
 
 import pygame
-from config import (LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, AMARELO, PRETO, 
+from config import (LARGURA_TELA, ALTURA_TELA, FPS, TITULO, FUNDO, BRANCO, AMARELO, PRETO,
                     PASSOS_POR_QUADRO)
 from mesa import Mesa
 from taco import Taco
 from desafios import criar_fases, POSICAO_BRANCA
+from telas import Telas
 
 
 class Jogo:
-    """Junta tudo: janela, mesa, taco, fases e o loop principal."""
+    """Junta tudo: janela, telas, mesa, taco, fases e o loop principal."""
 
-    def __init__(self):
-        """Inicia o pygame, cria a janela e começa a primeira fase."""
+    def _init_(self):
+        """Inicia o pygame, cria a janela e abre no menu."""
         pygame.init()
         self.tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
         pygame.display.set_caption(TITULO)
@@ -30,12 +31,14 @@ class Jogo:
 
         self.mesa = Mesa()
         self.taco = Taco()
+        self.telas = Telas()
         self.rodando = True
 
         self.fases = criar_fases()
         self.numero_fase = 0      # índice da fase atual na lista
         self.moedas = 0
-        self.comecar_fase()
+        # Qual tela está aparecendo: "menu", "instrucoes", "jogo" ou "fim"
+        self.tela_atual = "menu"
 
     def comecar_fase(self):
         """Coloca as bolas da fase atual na mesa."""
@@ -52,29 +55,61 @@ class Jogo:
                 return False
         return True
 
+    # ------------------------------------------------------------------
+    # Eventos (teclado e mouse)
+    # ------------------------------------------------------------------
     def tratar_eventos(self):
-        """Lê teclado e mouse."""
+        """Lê os eventos e manda cada um para a tela que está aberta."""
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
                 self.rodando = False
+            elif self.tela_atual == "menu":
+                self.eventos_menu(evento)
+            elif self.tela_atual == "instrucoes" or self.tela_atual == "fim":
+                if self.telas.botao_voltar.foi_clicado(evento):
+                    self.tela_atual = "menu"
+            elif self.tela_atual == "jogo":
+                self.eventos_jogo(evento)
 
-            elif self.estado == "jogando":
-                if evento.type == pygame.MOUSEBUTTONDOWN and self.todas_paradas():
-                    self.taco.comecar_carga()
-                elif evento.type == pygame.MOUSEBUTTONUP and self.taco.carregando:
-                    if self.taco.tacar(self.bola_branca, pygame.mouse.get_pos()):
-                        self.desafio.tacadas_restantes -= 1
-                        self.tacou = True
-                        for bola in self.bolas:
-                            bola.tabelas = 0      # zera a contagem de tabelas
+    def eventos_menu(self, evento):
+        """Cliques nos botões do menu."""
+        if self.telas.botao_jogar.foi_clicado(evento):
+            self.numero_fase = 0
+            self.comecar_fase()
+            self.tela_atual = "jogo"
+        elif self.telas.botao_instrucoes.foi_clicado(evento):
+            self.tela_atual = "instrucoes"
+        elif self.telas.botao_sair.foi_clicado(evento):
+            self.rodando = False
 
-            # Fase acabou: ENTER continua
-            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
-                if self.estado == "venceu":
-                    # vai para a próxima fase (depois da última, volta para a primeira)
-                    self.numero_fase = (self.numero_fase + 1) % len(self.fases)
+    def eventos_jogo(self, evento):
+        """Mouse para tacar, ENTER para seguir e ESC para voltar ao menu."""
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+            self.tela_atual = "menu"
+
+        elif self.estado == "jogando":
+            if evento.type == pygame.MOUSEBUTTONDOWN and self.todas_paradas():
+                self.taco.comecar_carga()
+            elif evento.type == pygame.MOUSEBUTTONUP and self.taco.carregando:
+                if self.taco.tacar(self.bola_branca, pygame.mouse.get_pos()):
+                    self.desafio.tacadas_restantes -= 1
+                    self.tacou = True
+                    for bola in self.bolas:
+                        bola.tabelas = 0      # zera a contagem de tabelas
+
+        # Fase acabou: ENTER continua
+        elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_RETURN:
+            if self.estado == "perdeu":
+                self.comecar_fase()                     # tenta de novo
+            elif self.numero_fase == len(self.fases) - 1:
+                self.tela_atual = "fim"                 # venceu a última fase
+            else:
+                self.numero_fase += 1                   # vai para a próxima
                 self.comecar_fase()
 
+    # ------------------------------------------------------------------
+    # Física
+    # ------------------------------------------------------------------
     def atualizar(self):
         """Move as bolas, vê o que caiu e confere se a fase acabou."""
         # Em vez de andar o quadro inteiro de uma vez, as bolas andam em
@@ -117,14 +152,16 @@ class Jogo:
             elif self.desafio.perdeu():
                 self.estado = "perdeu"
 
-
+    # ------------------------------------------------------------------
+    # Desenho
+    # ------------------------------------------------------------------
     def desenhar_texto(self, texto, fonte, cor, x, y):
         """Escreve um texto com o centro no ponto (x, y)."""
         imagem = fonte.render(texto, True, cor)
         self.tela.blit(imagem, imagem.get_rect(center=(x, y)))
 
-    def desenhar(self):
-        """Desenha tudo na tela."""
+    def desenhar_jogo(self):
+        """Desenha a mesa, as bolas, o taco e as informações da fase."""
         self.tela.fill(FUNDO)
         self.mesa.desenhar(self.tela)
         for bola in self.bolas:
@@ -146,24 +183,35 @@ class Jogo:
             if self.estado == "venceu":
                 self.desenhar_texto("Desafio cumprido!", self.fonte_grande, AMARELO, 500, 260)
                 self.desenhar_texto(f"+{self.desafio.recompensa} moedas", self.fonte, BRANCO, 500, 310)
-                self.desenhar_texto("ENTER para a próxima fase", self.fonte, BRANCO, 500, 350)
+                self.desenhar_texto("ENTER para continuar", self.fonte, BRANCO, 500, 350)
             else:
                 self.desenhar_texto("Não foi dessa vez...", self.fonte_grande, BRANCO, 500, 270)
                 self.desenhar_texto("ENTER para tentar de novo", self.fonte, BRANCO, 500, 340)
 
+    def desenhar(self):
+        """Desenha a tela que estiver aberta."""
+        if self.tela_atual == "menu":
+            self.telas.desenhar_menu(self.tela, self.moedas)
+        elif self.tela_atual == "instrucoes":
+            self.telas.desenhar_instrucoes(self.tela)
+        elif self.tela_atual == "fim":
+            self.telas.desenhar_fim(self.tela, self.moedas)
+        else:
+            self.desenhar_jogo()
         pygame.display.flip()
 
     def executar(self):
         """Loop principal: eventos -> atualização -> desenho, 60 vezes por segundo."""
         while self.rodando:
             self.tratar_eventos()
-            self.taco.atualizar()
-            self.atualizar()
+            if self.tela_atual == "jogo":
+                self.taco.atualizar()
+                self.atualizar()
             self.desenhar()
             self.relogio.tick(FPS)
         pygame.quit()
 
 
 # Só roda o jogo se este arquivo for executado diretamente
-if __name__ == "__main__":
+if _name_ == "_main_":
     Jogo().executar()
