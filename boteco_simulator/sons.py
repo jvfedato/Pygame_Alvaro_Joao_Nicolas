@@ -1,30 +1,30 @@
 """
-Sons do Boteco Simulator.
+sons.py - Os sons do jogo
 
-Carrega os arquivos da pasta assets uma vez só, no começo do jogo.
-Depois é só chamar .play() no som que quiser.
+Carrega os arquivos da pasta assets uma vez só, quando o jogo abre.
+Depois, pra tocar, é só fazer por exemplo: self.sons.tacada.play()
 """
 
 import os
 import pygame
 
-# Pasta "assets" que fica ao lado deste arquivo.
-# Assim o jogo acha os sons de qualquer lugar de onde for executado.
+# Caminho da pasta assets (fica do lado deste arquivo).
+# Assim funciona tanto pelo terminal quanto pelo botão de play do VS Code.
 PASTA_SONS = os.path.join(os.path.dirname(__file__), "assets")
 
 
 class Sons:
-    """Guarda todos os sons e a música de fundo."""
+    """Guarda os efeitos sonoros e a música."""
 
     def __init__(self):
-        """Carrega os efeitos sonoros e prepara a música."""
+        """Carrega os 3 efeitos e a música de fundo."""
         self.tacada = pygame.mixer.Sound(os.path.join(PASTA_SONS, "tacada.wav"))
         self.cacapa = pygame.mixer.Sound(os.path.join(PASTA_SONS, "cacapa.wav"))
         self.vitoria = pygame.mixer.Sound(os.path.join(PASTA_SONS, "vitoria.wav"))
 
         pygame.mixer.music.load(os.path.join(PASTA_SONS, "musica.mp3"))
-        pygame.mixer.music.set_volume(0.3)     # música baixinha (0 a 1)
+        pygame.mixer.music.set_volume(0.3)     # volume de 0 a 1
 
     def tocar_musica(self):
-        """Toca a música de fundo sem parar (-1 = repetir para sempre)."""
+        """Toca a música sem parar (o -1 quer dizer repetir pra sempre)."""
         pygame.mixer.music.play(-1)

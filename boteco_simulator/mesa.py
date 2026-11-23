@@ -1,34 +1,29 @@
 """
-Classe Mesa: a mesa de sinuca.
+mesa.py - A classe Mesa
 
-Cuida do desenho da mesa, das caçapas e de toda a física de colisão:
-bola com tabela, bola com bola e bola caindo na caçapa.
+Desenha a mesa (madeira, pano verde e as 6 caçapas) e cuida das batidas:
+bola na tabela, bola na bola e bola caindo na caçapa.
 """
 
 import pygame
-from config import (
-    LARGURA_TELA, ALTURA_TELA, MARGEM_MESA, LARGURA_BORDA, RAIO_CACAPA,
-    PERDA_TABELA, VERDE_PANO, MADEIRA, MADEIRA_ESCURA, PRETO,
-)
+from config import (LARGURA_TELA, ALTURA_TELA, MARGEM_MESA, LARGURA_BORDA, RAIO_CACAPA,
+                    PERDA_TABELA, VERDE_PANO, MADEIRA, MADEIRA_ESCURA, PRETO)
 
 
 class Mesa:
-    """A mesa de sinuca: área de jogo, tabelas e caçapas."""
+    """A mesa de sinuca."""
 
     def __init__(self):
-        """Calcula os limites do pano e a posição das 6 caçapas."""
-        # Retângulo da madeira (parte de fora da mesa)
-        self.rect_madeira = pygame.Rect(
-            MARGEM_MESA,
-            MARGEM_MESA,
-            LARGURA_TELA - 2 * MARGEM_MESA,
-            ALTURA_TELA - 2 * MARGEM_MESA,
-        )
-        # Retângulo do pano verde (onde as bolas andam)
+        """Calcula onde fica o pano e onde fica cada caçapa."""
+        # Retângulo da madeira (a mesa inteira)
+        largura = LARGURA_TELA - 2 * MARGEM_MESA
+        altura = ALTURA_TELA - 2 * MARGEM_MESA
+        self.rect_madeira = pygame.Rect(MARGEM_MESA, MARGEM_MESA, largura, altura)
+
+        # Retângulo do pano verde: a madeira encolhida pra dentro (onde as bolas andam)
         self.rect_pano = self.rect_madeira.inflate(-2 * LARGURA_BORDA, -2 * LARGURA_BORDA)
 
-        # As 6 caçapas: 4 cantos + 2 no meio das laterais compridas.
-        # Cada caçapa recebe um nome para usarmos nos desafios depois.
+        # As 6 caçapas: 4 nos cantos e 2 no meio das laterais grandes
         p = self.rect_pano
         self.cacapas = {
             "sup_esq": pygame.Vector2(p.left, p.top),
@@ -39,11 +34,8 @@ class Mesa:
             "inf_dir": pygame.Vector2(p.right, p.bottom),
         }
 
-    # ------------------------------------------------------------------
-    # Desenho
-    # ------------------------------------------------------------------
     def desenhar(self, tela):
-        """Desenha madeira, pano e caçapas."""
+        """Desenha a madeira, o pano e os buracos."""
         pygame.draw.rect(tela, MADEIRA_ESCURA, self.rect_madeira.inflate(10, 10), border_radius=18)
         pygame.draw.rect(tela, MADEIRA, self.rect_madeira, border_radius=14)
         pygame.draw.rect(tela, VERDE_PANO, self.rect_pano)
@@ -51,37 +43,26 @@ class Mesa:
         for centro in self.cacapas.values():
             pygame.draw.circle(tela, PRETO, (int(centro.x), int(centro.y)), RAIO_CACAPA)
 
-    # ------------------------------------------------------------------
-    # Física
-    # ------------------------------------------------------------------
     def colidir_tabelas(self, bola):
-        """
-        Faz a bola quicar se ela encostar na tabela.
-
-        Returns:
-            bool: True se a bola bateu na tabela neste quadro.
-        """
+        """Se a bola passou da borda, volta ela e inverte a direção. Retorna True se bateu."""
         p = self.rect_pano
         bateu = False
 
-        # Parede esquerda: se a bola passou do limite, empurra de volta
-        # e inverte a velocidade horizontal (por isso o sinal de menos).
+        # Bateu na esquerda ou na direita: inverte a velocidade no x
         if bola.pos.x - bola.raio < p.left:
             bola.pos.x = p.left + bola.raio
             bola.vel.x = -bola.vel.x * PERDA_TABELA
             bateu = True
-        # Parede direita
         elif bola.pos.x + bola.raio > p.right:
             bola.pos.x = p.right - bola.raio
             bola.vel.x = -bola.vel.x * PERDA_TABELA
             bateu = True
 
-        # Parede de cima: agora invertemos a velocidade vertical
+        # Bateu em cima ou embaixo: inverte a velocidade no y
         if bola.pos.y - bola.raio < p.top:
             bola.pos.y = p.top + bola.raio
             bola.vel.y = -bola.vel.y * PERDA_TABELA
             bateu = True
-        # Parede de baixo
         elif bola.pos.y + bola.raio > p.bottom:
             bola.pos.y = p.bottom - bola.raio
             bola.vel.y = -bola.vel.y * PERDA_TABELA
@@ -90,53 +71,39 @@ class Mesa:
         return bateu
 
     def verificar_cacapa(self, bola):
-        """
-        Verifica se a bola caiu em alguma caçapa.
-
-        Returns:
-            str | None: o nome da caçapa onde caiu, ou None se não caiu.
-        """
+        """Vê se a bola caiu em algum buraco. Retorna o nome do buraco ou None."""
         for nome, centro in self.cacapas.items():
-            # Se o centro da bola está dentro do buraco, ela caiu
+            # O centro da bola entrou no buraco? Então caiu
             if bola.pos.distance_to(centro) < RAIO_CACAPA:
                 bola.encacapada = True
                 bola.vel = pygame.Vector2(0, 0)
                 return nome
         return None
 
-    @staticmethod
-    def colidir_bolas(a, b):
-        """
-        Resolve a colisão entre duas bolas (choque elástico, mesma massa).
-
-        Returns:
-            bool: True se as bolas se encostaram neste quadro.
-        """
+    def colidir_bolas(self, a, b):
+        """Faz duas bolas baterem uma na outra, se estiverem encostando."""
         if a.encacapada or b.encacapada:
-            return False
+            return
 
-        diferenca = b.pos - a.pos          # vetor que vai do centro de A ao de B
+        diferenca = b.pos - a.pos          # seta do centro da A até o centro da B
         distancia = diferenca.length()
         soma_raios = a.raio + b.raio
 
-        # Não estão encostando (ou estão exatamente no mesmo ponto)
+        # Longe demais (ou exatamente no mesmo lugar): não bateram
         if distancia == 0 or distancia >= soma_raios:
-            return False
+            return
 
-        # "normal" = direção da linha que liga os dois centros, com tamanho 1
-        normal = diferenca / distancia
+        # Direção da linha que liga os dois centros (seta de tamanho 1)
+        direcao = diferenca / distancia
 
-        # 1) Separar as bolas para não ficarem uma dentro da outra
-        sobreposicao = soma_raios - distancia
-        a.pos -= normal * (sobreposicao / 2)
-        b.pos += normal * (sobreposicao / 2)
+        # 1) Afasta as duas pra não ficarem uma dentro da outra
+        entrou = soma_raios - distancia
+        a.pos -= direcao * (entrou / 2)
+        b.pos += direcao * (entrou / 2)
 
-        # 2) Trocar a parte da velocidade que está na direção da normal.
-        #    Em bolas de mesma massa, num choque perfeito, elas "trocam"
-        #    essa componente. A componente de lado continua igual.
-        vel_relativa = a.vel - b.vel
-        impacto = vel_relativa.dot(normal)   # produto escalar = quanto vai na direção da normal
-        if impacto > 0:                       # só se estiverem se aproximando
-            a.vel -= normal * impacto
-            b.vel += normal * impacto
-        return True
+        # 2) Troca a velocidade na direção da linha entre os centros.
+        #    O .dot (produto escalar) mede quanto da velocidade vai nessa direção.
+        empurrao = (a.vel - b.vel).dot(direcao)
+        if empurrao > 0:                   # só se estiverem indo uma contra a outra
+            a.vel -= direcao * empurrao
+            b.vel += direcao * empurrao

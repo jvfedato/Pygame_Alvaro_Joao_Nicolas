@@ -1,21 +1,16 @@
 """
-Loja do Boteco Simulator.
+loja.py - A loja de melhorias
 
-O jogador gasta as moedas ganhas nas fases para comprar melhorias.
+O jogador gasta as moedas das fases comprando melhorias.
 Cada melhoria só pode ser comprada uma vez.
 """
 
 
 class Melhoria:
-    """Uma melhoria que pode ser comprada na loja."""
+    """Uma coisa que dá pra comprar na loja."""
 
     def __init__(self, nome, descricao, preco):
-        """
-        Args:
-            nome (str): nome que aparece no botão.
-            descricao (str): explicação curta do que a melhoria faz.
-            preco (int): quantas moedas custa.
-        """
+        """Começa sem estar comprada."""
         self.nome = nome
         self.descricao = descricao
         self.preco = preco
@@ -23,32 +18,22 @@ class Melhoria:
 
 
 class Loja:
-    """Guarda as melhorias e cuida das compras."""
+    """Guarda as 3 melhorias e faz as compras."""
 
     def __init__(self):
-        """Cria as 3 melhorias do jogo."""
+        """Cria as melhorias com nome, explicação e preço."""
         self.mira_longa = Melhoria("Mira longa", "A linha que mostra para onde a bola vai fica 2x maior", 40)
         self.tacada_extra = Melhoria("Tacada extra", "Ganha +1 tacada em todas as fases", 60)
         self.moedas_dobro = Melhoria("Moedas em dobro", "Cada fase vencida dá o dobro de moedas", 100)
 
-        # Lista com as 3, na ordem em que aparecem na tela
+        # Mesma ordem dos botões na tela
         self.melhorias = [self.mira_longa, self.tacada_extra, self.moedas_dobro]
 
     def comprar(self, melhoria, moedas):
-        """
-        Tenta comprar uma melhoria.
-
-        Args:
-            melhoria (Melhoria): a melhoria escolhida.
-            moedas (int): quantas moedas o jogador tem.
-
-        Returns:
-            int: quantas moedas sobraram depois da compra
-            (se não deu para comprar, devolve o mesmo valor).
-        """
+        """Tenta comprar e retorna quantas moedas sobraram."""
         if melhoria.comprada:
-            return moedas            # já tem, não compra de novo
+            return moedas            # já tem
         if moedas < melhoria.preco:
-            return moedas            # dinheiro não dá
+            return moedas            # não tem dinheiro
         melhoria.comprada = True
         return moedas - melhoria.preco

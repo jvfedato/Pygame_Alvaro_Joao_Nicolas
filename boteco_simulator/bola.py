@@ -1,8 +1,8 @@
 """
-Classe Bola: representa uma bola de sinuca.
+bola.py - A classe Bola
 
-Cada bola sabe sua posição, velocidade, cor e número.
-Ela também sabe se mover, desacelerar pelo atrito e se desenhar.
+Cada bola guarda onde ela está (pos), pra onde e quão rápido ela vai (vel),
+a cor e o número. A bola sabe andar, frear e se desenhar na tela.
 """
 
 import pygame
@@ -10,76 +10,52 @@ from config import RAIO_BOLA, ATRITO, VELOCIDADE_MINIMA, BRANCO, PRETO
 
 
 class Bola:
-    """Uma bola de sinuca com posição, velocidade e cor."""
+    """Uma bola de sinuca."""
 
     def __init__(self, x, y, cor, numero=0):
-        """
-        Cria uma bola.
-
-        Args:
-            x (float): posição horizontal inicial.
-            y (float): posição vertical inicial.
-            cor (tuple): cor RGB da bola.
-            numero (int): número da bola (0 = bola branca).
-        """
-        # pygame.Vector2 guarda dois números (x, y) e permite fazer contas
-        # de vetor, como somar, multiplicar e medir comprimento.
+        """Cria a bola parada no ponto (x, y). Número 0 é a bola branca."""
+        # Vector2 guarda x e y juntos e deixa a gente somar e multiplicar fácil
         self.pos = pygame.Vector2(x, y)
-        self.vel = pygame.Vector2(0, 0)   # começa parada
+        self.vel = pygame.Vector2(0, 0)
         self.cor = cor
         self.numero = numero
         self.raio = RAIO_BOLA
-        self.encacapada = False           # vira True quando cai na caçapa
-        self.tabelas = 0                  # quantas vezes bateu na tabela nesta tacada
-        
+        self.encacapada = False      # vira True quando cai num buraco
+        self.tabelas = 0             # quantas vezes bateu na tabela nessa tacada
 
     def esta_parada(self):
-        """Retorna True se a bola estiver parada (ou já encaçapada)."""
+        """Diz se a bola está parada (ou se já caiu)."""
         return self.encacapada or self.vel.length() == 0
 
     def mover(self, fracao):
-        """
-        Anda um pedaço do caminho do quadro.
-
-        Args:
-            fracao (float): que pedaço do quadro andar (ex.: 0.1 = um décimo).
-        """
+        """Anda um pedaço do caminho (fracao = 0.1 anda um décimo do quadro)."""
         self.pos += self.vel * fracao
 
     def frear(self):
-        """Aplica o atrito do pano (uma vez por quadro)."""
+        """Diminui a velocidade por causa do atrito do pano."""
         if self.encacapada:
             return
 
-        # Atrito: a velocidade diminui um pouco a cada quadro
         self.vel *= ATRITO
 
-        # Se ficou muito lenta, para de vez (senão ela "andaria" para sempre)
+        # Se ficou muito devagar, para de vez (senão nunca chegaria a zero)
         if self.vel.length() < VELOCIDADE_MINIMA:
             self.vel = pygame.Vector2(0, 0)
-            
-    def desenhar(self, tela, fonte):
-        """
-        Desenha a bola na tela.
 
-        Args:
-            tela (pygame.Surface): onde desenhar.
-            fonte (pygame.font.Font): fonte para escrever o número.
-        """
+    def desenhar(self, tela, fonte):
+        """Desenha a bola com sombra, brilho e o número."""
         if self.encacapada:
             return
 
-        centro = (int(self.pos.x), int(self.pos.y))
+        x = int(self.pos.x)
+        y = int(self.pos.y)
 
-        # Sombra levemente deslocada para dar sensação de profundidade
-        pygame.draw.circle(tela, (10, 60, 30), (centro[0] + 2, centro[1] + 2), self.raio)
-        # Corpo da bola
-        pygame.draw.circle(tela, self.cor, centro, self.raio)
-        # Brilho pequeno no canto superior esquerdo
-        pygame.draw.circle(tela, BRANCO, (centro[0] - 4, centro[1] - 4), 3)
+        pygame.draw.circle(tela, (10, 60, 30), (x + 2, y + 2), self.raio)   # sombra
+        pygame.draw.circle(tela, self.cor, (x, y), self.raio)               # bola
+        pygame.draw.circle(tela, BRANCO, (x - 4, y - 4), 3)                 # brilho
 
-        # Bolas numeradas ganham um círculo branco com o número no meio
+        # Bola com número: bolinha branca no meio com o número escrito
         if self.numero > 0:
-            pygame.draw.circle(tela, BRANCO, centro, 6)
+            pygame.draw.circle(tela, BRANCO, (x, y), 6)
             texto = fonte.render(str(self.numero), True, PRETO)
-            tela.blit(texto, texto.get_rect(center=centro))
+            tela.blit(texto, texto.get_rect(center=(x, y)))

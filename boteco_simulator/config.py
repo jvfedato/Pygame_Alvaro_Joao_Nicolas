@@ -1,32 +1,34 @@
 """
-Configurações gerais do Boteco Simulator.
+config.py - Configurações do jogo
 
-Aqui ficam as configuracoes sem precisar ficar cacando em outros arquivos. 
+Aqui ficam todos os números e cores do jogo num lugar só,
+pra não precisar ficar caçando nos outros arquivos.
+Se quiser mudar alguma coisa (tamanho, atrito, cor), é só mudar aqui.
 """
 
-# ---------------- Janela ----------------
-LARGURA_TELA = 1000          # largura da janela em pixels
-ALTURA_TELA = 600            # altura da janela em pixels
-FPS = 60                     # quadros por segundo (quantas vezes a tela atualiza)
+# --- Janela ---
+LARGURA_TELA = 1000
+ALTURA_TELA = 600
+FPS = 60                     # quantas vezes por segundo a tela atualiza
 TITULO = "Boteco Simulator"
 
-# ---------------- Mesa ----------------
-MARGEM_MESA = 60             # distância da borda da janela até a madeira da mesa
-LARGURA_BORDA = 30           # espessura da madeira (tabela) em volta do pano
-RAIO_CACAPA = 22             # raio das caçapas (buracos)
+# --- Mesa ---
+MARGEM_MESA = 60             # espaço entre a borda da janela e a mesa
+LARGURA_BORDA = 30           # grossura da madeira em volta do pano
+RAIO_CACAPA = 22
 
-# ---------------- Bolas ----------------
-RAIO_BOLA = 11               # raio de cada bola em pixels
-ATRITO = 0.99              # a cada quadro a velocidade é multiplicada por isso 
-VELOCIDADE_MINIMA = 0.05     # abaixo disso consideramos a bola parada
-PERDA_TABELA = 0.8           # ao bater na tabela a bola mantém 80% da velocidade
-PASSOS_POR_QUADRO = 10
+# --- Bolas ---
+RAIO_BOLA = 11
+ATRITO = 0.99                # a velocidade é multiplicada por isso a cada quadro
+VELOCIDADE_MINIMA = 0.05     # mais lento que isso, a bola para
+PERDA_TABELA = 0.8           # ao bater na tabela, a bola fica com 80% da velocidade
+PASSOS_POR_QUADRO = 10       # cada quadro é dividido em 10 passinhos (a bola não atravessa outra)
 
-# ---------------- Taco ----------------
-FORCA_MAXIMA = 18            # velocidade máxima que a tacada pode dar à bola branca
-VELOCIDADE_CARGA = 0.35      # quanto a força aumenta por quadro segurando o mouse
+# --- Taco ---
+FORCA_MAXIMA = 18
+VELOCIDADE_CARGA = 0.35      # quanto a força sobe por quadro segurando o mouse
 
-# ---------------- Cores (R, G, B) ----------------
+# --- Cores (vermelho, verde, azul) ---
 PRETO = (0, 0, 0)
 BRANCO = (255, 255, 255)
 VERDE_PANO = (20, 110, 60)
@@ -41,7 +43,7 @@ ROXO = (120, 40, 150)
 VERDE = (30, 150, 60)
 MARROM = (120, 60, 30)
 
-# Cor de cada bola numerada (índice = número da bola)
+# Cor de cada bola pelo número dela
 CORES_BOLAS = {
     1: AMARELO,
     2: AZUL,
@@ -52,4 +54,5 @@ CORES_BOLAS = {
     7: MARROM,
     8: PRETO,
 }
+
 # Tamanhos das bolas, dimensoes da mesa e cores das bolas foram pegos baseados em IA
