@@ -3,8 +3,8 @@ Boteco Simulator - arquivo principal.
 
 Execute este arquivo para jogar:  python main.py
 
-Etapa 3: o jogo agora tem telas. Começa no menu, tem uma tela de
-instruções, as fases e uma tela de fim de jogo.
+Etapa 4: menu, instruções, fases, loja de melhorias e tela de fim.
+As moedas ganhas nas fases compram melhorias na loja.
 """
 
 import pygame
@@ -15,7 +15,7 @@ from taco import Taco
 from desafios import criar_fases, POSICAO_BRANCA
 from telas import Telas
 from sons import Sons
-
+from loja import Loja
 
 
 class Jogo:
@@ -36,12 +36,14 @@ class Jogo:
         self.telas = Telas()
         self.sons = Sons()
         self.sons.tocar_musica()
+        self.loja = Loja()
         self.rodando = True
 
         self.fases = criar_fases()
         self.numero_fase = 0      # índice da fase atual na lista
         self.moedas = 0
-        # Qual tela está aparecendo: "menu", "instrucoes", "jogo" ou "fim"
+        self.moedas_ganhas = 0    # moedas ganhas na última fase vencida
+        # Qual tela está aparecendo: "menu", "instrucoes", "loja", "jogo" ou "fim"
         self.tela_atual = "menu"
 
     def comecar_fase(self):
@@ -51,6 +53,10 @@ class Jogo:
         self.bola_branca = self.bolas[0]
         self.estado = "jogando"   # pode ser "jogando", "venceu" ou "perdeu"
         self.tacou = False        # True depois da tacada, até as bolas pararem
+
+        # Melhoria da loja: uma tacada a mais em toda fase
+        if self.loja.tacada_extra.comprada:
+            self.desafio.tacadas_restantes += 1
 
     def todas_paradas(self):
         """Retorna True se nenhuma bola estiver se mexendo."""
@@ -72,6 +78,8 @@ class Jogo:
             elif self.tela_atual == "instrucoes" or self.tela_atual == "fim":
                 if self.telas.botao_voltar.foi_clicado(evento):
                     self.tela_atual = "menu"
+            elif self.tela_atual == "loja":
+                self.eventos_loja(evento)
             elif self.tela_atual == "jogo":
                 self.eventos_jogo(evento)
 
@@ -81,10 +89,28 @@ class Jogo:
             self.numero_fase = 0
             self.comecar_fase()
             self.tela_atual = "jogo"
+        elif self.telas.botao_loja.foi_clicado(evento):
+            self.tela_atual = "loja"
         elif self.telas.botao_instrucoes.foi_clicado(evento):
             self.tela_atual = "instrucoes"
         elif self.telas.botao_sair.foi_clicado(evento):
             self.rodando = False
+
+    def eventos_loja(self, evento):
+        """Cliques na loja: comprar uma melhoria ou voltar ao menu."""
+        if self.telas.botao_voltar.foi_clicado(evento):
+            self.tela_atual = "menu"
+
+        for i in range(len(self.loja.melhorias)):
+            if self.telas.botoes_loja[i].foi_clicado(evento):
+                antes = self.moedas
+                self.moedas = self.loja.comprar(self.loja.melhorias[i], self.moedas)
+                if self.moedas < antes:            # gastou moedas = comprou
+                    self.sons.vitoria.play()
+
+        # Melhoria da loja: mira mais longa
+        if self.loja.mira_longa.comprada:
+            self.taco.tamanho_mira = 6
 
     def eventos_jogo(self, evento):
         """Mouse para tacar, ENTER para seguir e ESC para voltar ao menu."""
@@ -96,7 +122,7 @@ class Jogo:
                 self.taco.comecar_carga()
             elif evento.type == pygame.MOUSEBUTTONUP and self.taco.carregando:
                 if self.taco.tacar(self.bola_branca, pygame.mouse.get_pos()):
-                    self.sons.tacada.play()          # ← linha nova
+                    self.sons.tacada.play()
                     self.desafio.tacadas_restantes -= 1
                     self.tacou = True
                     for bola in self.bolas:
@@ -155,7 +181,10 @@ class Jogo:
 
             if self.desafio.venceu():
                 self.estado = "venceu"
-                self.moedas += self.desafio.recompensa
+                self.moedas_ganhas = self.desafio.recompensa
+                if self.loja.moedas_dobro.comprada:        # melhoria da loja
+                    self.moedas_ganhas = self.moedas_ganhas * 2
+                self.moedas += self.moedas_ganhas
                 self.sons.vitoria.play()
             elif self.desafio.perdeu():
                 self.estado = "perdeu"
@@ -190,7 +219,7 @@ class Jogo:
             pygame.draw.rect(self.tela, PRETO, (250, 200, 500, 200), border_radius=12)
             if self.estado == "venceu":
                 self.desenhar_texto("Desafio cumprido!", self.fonte_grande, AMARELO, 500, 260)
-                self.desenhar_texto(f"+{self.desafio.recompensa} moedas", self.fonte, BRANCO, 500, 310)
+                self.desenhar_texto(f"+{self.moedas_ganhas} moedas", self.fonte, BRANCO, 500, 310)
                 self.desenhar_texto("ENTER para continuar", self.fonte, BRANCO, 500, 350)
             else:
                 self.desenhar_texto("Não foi dessa vez...", self.fonte_grande, BRANCO, 500, 270)
@@ -202,6 +231,8 @@ class Jogo:
             self.telas.desenhar_menu(self.tela, self.moedas)
         elif self.tela_atual == "instrucoes":
             self.telas.desenhar_instrucoes(self.tela)
+        elif self.tela_atual == "loja":
+            self.telas.desenhar_loja(self.tela, self.moedas, self.loja.melhorias)
         elif self.tela_atual == "fim":
             self.telas.desenhar_fim(self.tela, self.moedas)
         else:

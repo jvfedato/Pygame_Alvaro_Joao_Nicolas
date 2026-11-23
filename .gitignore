@@ -1,0 +1,8 @@
+# Arquivos que o Git deve ignorar (não vão para o GitHub)
+
+# Cache que o Python cria sozinho para rodar mais rápido
+__pycache__/
+*.pyc
+
+# Arquivo de sistema do Mac
+.DS_Store

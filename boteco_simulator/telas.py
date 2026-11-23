@@ -9,7 +9,7 @@ import pygame
 from config import LARGURA_TELA, FUNDO, BRANCO, AMARELO, MADEIRA, VERDE_PANO, CORES_BOLAS
 
 MEIO_X = LARGURA_TELA // 2   # coordenada x do meio da tela
-ALTURA_BALCAO = 480          # y do tampo do balcão onde ficam as bebidas
+ALTURA_BALCAO = 490          # y do tampo do balcão onde ficam as bebidas
 
 # Cores das bebidas
 VIDRO_MARROM = (90, 45, 15)
@@ -110,12 +110,19 @@ class Telas:
         self.fonte_media = pygame.font.SysFont("arial", 28, bold=True)
         self.fonte = pygame.font.SysFont("arial", 20)
 
-        # Botões do menu
-        self.botao_jogar = Botao("Jogar", MEIO_X, 300)
-        self.botao_instrucoes = Botao("Instruções", MEIO_X, 370)
-        self.botao_sair = Botao("Sair", MEIO_X, 440)
-        # Botão usado nas telas de instruções e de fim
-        self.botao_voltar = Botao("Voltar ao menu", MEIO_X, 520)
+        # Botões do menu (um embaixo do outro, de 60 em 60 pixels)
+        self.botao_jogar = Botao("Jogar", MEIO_X, 270, altura=50)
+        self.botao_loja = Botao("Loja", MEIO_X, 330, altura=50)
+        self.botao_instrucoes = Botao("Instruções", MEIO_X, 390, altura=50)
+        self.botao_sair = Botao("Sair", MEIO_X, 450, altura=50)
+        # Botão usado nas telas de instruções, loja e fim
+        self.botao_voltar = Botao("Voltar ao menu", MEIO_X, 540)
+        # Um botão para cada melhoria da loja (o texto é trocado na hora de desenhar)
+        self.botoes_loja = [
+            Botao("", MEIO_X, 200, largura=480),
+            Botao("", MEIO_X, 300, largura=480),
+            Botao("", MEIO_X, 400, largura=480),
+        ]
 
     def escrever(self, tela, texto, fonte, cor, y):
         """Escreve um texto centralizado na horizontal, na altura y."""
@@ -143,9 +150,10 @@ class Telas:
 
         self.escrever(tela, "Boteco Simulator", self.fonte_titulo, AMARELO, 90)
         self.escrever(tela, "A sinuca do boteco, agora no seu computador", self.fonte, BRANCO, 140)
-        self.escrever(tela, f"Moedas: {moedas}", self.fonte_media, AMARELO, 540)
+        self.escrever(tela, f"Moedas: {moedas}", self.fonte_media, AMARELO, 550)
 
         self.botao_jogar.desenhar(tela, self.fonte_media)
+        self.botao_loja.desenhar(tela, self.fonte_media)
         self.botao_instrucoes.desenhar(tela, self.fonte_media)
         self.botao_sair.desenhar(tela, self.fonte_media)
 
@@ -160,13 +168,39 @@ class Telas:
             "Cada fase tem um desafio escrito no topo da tela.",
             "Você tem um número limitado de tacadas para cumprir o desafio.",
             "Se a bola branca cair na caçapa, ela volta para o lugar inicial.",
-            "Vencendo uma fase você ganha moedas.",
+            "Vencendo uma fase você ganha moedas para gastar na loja.",
             "ESC durante o jogo volta para o menu.",
         ]
         y = 150
         for linha in linhas:
             self.escrever(tela, linha, self.fonte, BRANCO, y)
             y += 40           # cada linha 40 pixels abaixo da anterior
+
+        self.botao_voltar.desenhar(tela, self.fonte_media)
+
+    def desenhar_loja(self, tela, moedas, melhorias):
+        """
+        Tela da loja: um botão para cada melhoria, com o preço.
+
+        Args:
+            tela (pygame.Surface): onde desenhar.
+            moedas (int): moedas do jogador.
+            melhorias (list): lista de objetos Melhoria (do loja.py).
+        """
+        tela.fill(FUNDO)
+        self.escrever(tela, "Loja do Boteco", self.fonte_titulo, AMARELO, 60)
+        self.escrever(tela, f"Suas moedas: {moedas}", self.fonte_media, AMARELO, 125)
+
+        # O botão 0 é da melhoria 0, o botão 1 da melhoria 1, e assim por diante
+        for i in range(len(melhorias)):
+            botao = self.botoes_loja[i]
+            melhoria = melhorias[i]
+            if melhoria.comprada:
+                botao.texto = f"{melhoria.nome} - COMPRADO"
+            else:
+                botao.texto = f"{melhoria.nome} - {melhoria.preco} moedas"
+            botao.desenhar(tela, self.fonte_media)
+            self.escrever(tela, melhoria.descricao, self.fonte, BRANCO, botao.rect.bottom + 18)
 
         self.botao_voltar.desenhar(tela, self.fonte_media)
 
