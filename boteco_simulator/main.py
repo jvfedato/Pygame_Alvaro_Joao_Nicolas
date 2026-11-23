@@ -19,7 +19,7 @@ from telas import Telas
 class Jogo:
     """Junta tudo: janela, telas, mesa, taco, fases e o loop principal."""
 
-    def _init_(self):
+    def __init__(self):
         """Inicia o pygame, cria a janela e abre no menu."""
         pygame.init()
         self.tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
@@ -213,5 +213,5 @@ class Jogo:
 
 
 # Só roda o jogo se este arquivo for executado diretamente
-if _name_ == "_main_":
+if __name__ == "__main__":
     Jogo().executar()

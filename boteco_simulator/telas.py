@@ -69,7 +69,7 @@ def desenhar_copo_whisky(tela, x, base):
 class Botao:
     """Um botão retangular com texto, que muda de cor quando o mouse passa em cima."""
 
-    def _init_(self, texto, x, y, largura=260, altura=55):
+    def __init__(self, texto, x, y, largura=260, altura=55):
         """
         Args:
             texto (str): o que aparece escrito no botão.
@@ -104,7 +104,7 @@ class Botao:
 class Telas:
     """Desenha as telas que não são a mesa de jogo."""
 
-    def _init_(self):
+    def __init__(self):
         """Cria as fontes e todos os botões."""
         self.fonte_titulo = pygame.font.SysFont("arial", 64, bold=True)
         self.fonte_media = pygame.font.SysFont("arial", 28, bold=True)
