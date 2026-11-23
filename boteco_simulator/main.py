@@ -14,6 +14,8 @@ from mesa import Mesa
 from taco import Taco
 from desafios import criar_fases, POSICAO_BRANCA
 from telas import Telas
+from sons import Sons
+
 
 
 class Jogo:
@@ -32,6 +34,8 @@ class Jogo:
         self.mesa = Mesa()
         self.taco = Taco()
         self.telas = Telas()
+        self.sons = Sons()
+        self.sons.tocar_musica()
         self.rodando = True
 
         self.fases = criar_fases()
@@ -92,6 +96,7 @@ class Jogo:
                 self.taco.comecar_carga()
             elif evento.type == pygame.MOUSEBUTTONUP and self.taco.carregando:
                 if self.taco.tacar(self.bola_branca, pygame.mouse.get_pos()):
+                    self.sons.tacada.play()          # ← linha nova
                     self.desafio.tacadas_restantes -= 1
                     self.tacou = True
                     for bola in self.bolas:
@@ -125,8 +130,10 @@ class Jogo:
                 if cacapa is None:
                     if self.mesa.colidir_tabelas(bola):
                         bola.tabelas += 1
-                elif bola != self.bola_branca:
-                    self.desafio.bola_caiu(bola, cacapa)
+                    else:
+                        self.sons.cacapa.play()            # alguma bola caiu
+                    if bola != self.bola_branca:
+                        self.desafio.bola_caiu(bola, cacapa)
 
             # Testa cada par de bolas uma única vez
             for i in range(len(self.bolas)):
@@ -149,6 +156,7 @@ class Jogo:
             if self.desafio.venceu():
                 self.estado = "venceu"
                 self.moedas += self.desafio.recompensa
+                self.sons.vitoria.play()
             elif self.desafio.perdeu():
                 self.estado = "perdeu"
 

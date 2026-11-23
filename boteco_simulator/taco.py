@@ -4,27 +4,26 @@ Classe Taco: a mira e a tacada.
 O jogador mira com o mouse, segura o botão esquerdo para carregar a força
 e solta para dar a tacada.
 
-A mira usa a técnica da "bola fantasma": calculamos onde a bola branca
-vai estar no instante em que encostar na primeira bola do caminho e
-desenhamos um círculo ali. A partir desse ponto mostramos:
-  - para onde a bola atingida vai (linha que sai dela);
-  - para onde a bola branca desvia depois do choque (linha curta).
-O comprimento dessas linhas (tamanho_mira) vai poder ser melhorado na loja.
+A mira funciona "andando" com um ponto invisível a partir da bola branca,
+de 2 em 2 pixels, na direção do mouse, até ele encostar numa bola ou na
+tabela. Nesse ponto desenhamos um círculo: é onde a branca vai estar
+quando bater. Se bateu numa bola, também mostramos para onde ela vai.
 """
 
-import math
 import pygame
 from config import FORCA_MAXIMA, VELOCIDADE_CARGA, BRANCO, MADEIRA, AMARELO, VERMELHO
+
+PASSO_MIRA = 2   # de quantos em quantos pixels o ponto da mira anda
 
 
 class Taco:
     """Controla a mira, a força e o desenho do taco."""
 
-    def __init__(self, tamanho_mira=80):
+    def __init__(self, tamanho_mira=3):
         """
         Args:
-            tamanho_mira (int): comprimento da linha que mostra para onde
-                a bola atingida vai (em pixels).
+            tamanho_mira (int): quantas vezes esticar a linha que mostra
+                para onde a bola atingida vai. Vai melhorar na loja.
         """
         self.forca = 0.0
         self.carregando = False
@@ -68,68 +67,41 @@ class Taco:
         self.forca = 0
         return True
 
-    # ------------------------------------------------------------------
-    # Cálculo da mira
-    # ------------------------------------------------------------------
     @staticmethod
-    def primeira_bola_no_caminho(bola_branca, d, bolas):
+    def achar_contato(bola_branca, d, bolas, rect_pano):
         """
-        Descobre qual bola a branca vai acertar primeiro andando na direção d.
+        Anda com um ponto a partir da branca até encostar em algo.
 
-        Ideia: a branca encosta numa bola quando a distância entre os
-        centros fica igual a 2 raios. Então "inflamos" cada bola para
-        raio 2R e vemos onde a reta da tacada entra nesse círculo maior.
+        Args:
+            bola_branca (Bola): a bola branca.
+            d (pygame.Vector2): direção da tacada.
+            bolas (list): todas as bolas da mesa.
+            rect_pano (pygame.Rect): área do pano.
 
         Returns:
-            tuple: (bola_atingida, distancia_percorrida) ou (None, None).
-        """
-        melhor_bola = None
-        melhor_t = None
-        for bola in bolas:
-            if bola is bola_branca or bola.encacapada:
-                continue
-            m = bola.pos - bola_branca.pos      # vetor da branca até a bola
-            proj = m.dot(d)                     # quanto dessa distância está "na frente"
-            if proj <= 0:
-                continue                        # bola está atrás, não tem como acertar
-            # distância (ao quadrado) entre o centro da bola e a reta da tacada
-            perp2 = m.length_squared() - proj ** 2
-            alcance2 = (2 * bola.raio) ** 2
-            if perp2 > alcance2:
-                continue                        # a reta passa longe demais
-            # Pitágoras: recua do ponto mais próximo até onde encosta
-            t = proj - math.sqrt(alcance2 - perp2)
-            if melhor_t is None or t < melhor_t:
-                melhor_bola, melhor_t = bola, t
-        return melhor_bola, melhor_t
-
-    @staticmethod
-    def distancia_ate_tabela(bola_branca, d, rect_pano):
-        """
-        Calcula quanto a branca anda na direção d até encostar na tabela.
-
-        Returns:
-            float: distância em pixels.
+            tuple: (ponto, bola_atingida). bola_atingida é None se a
+            mira encostou na tabela antes de qualquer bola.
         """
         r = bola_branca.raio
-        tempos = []
-        # Para cada eixo, quanto falta até a parede dividido pela velocidade nesse eixo
-        if d.x > 0:
-            tempos.append((rect_pano.right - r - bola_branca.pos.x) / d.x)
-        elif d.x < 0:
-            tempos.append((rect_pano.left + r - bola_branca.pos.x) / d.x)
-        if d.y > 0:
-            tempos.append((rect_pano.bottom - r - bola_branca.pos.y) / d.y)
-        elif d.y < 0:
-            tempos.append((rect_pano.top + r - bola_branca.pos.y) / d.y)
-        return max(0, min(tempos))
+        ponto = pygame.Vector2(bola_branca.pos)
+        while True:
+            ponto += d * PASSO_MIRA     # dá um passinho na direção da tacada
 
-    # ------------------------------------------------------------------
-    # Desenho
-    # ------------------------------------------------------------------
+            # Encostou numa bola? (distância entre centros menor que 2 raios)
+            for bola in bolas:
+                if bola is bola_branca or bola.encacapada:
+                    continue
+                if ponto.distance_to(bola.pos) <= 2 * r:
+                    return ponto, bola
+
+            # Encostou na tabela?
+            if (ponto.x - r <= rect_pano.left or ponto.x + r >= rect_pano.right
+                    or ponto.y - r <= rect_pano.top or ponto.y + r >= rect_pano.bottom):
+                return ponto, None
+
     def desenhar(self, tela, bola_branca, pos_mouse, bolas, rect_pano):
         """
-        Desenha a mira (com bola fantasma), o taco e a barra de força.
+        Desenha a mira, o taco e a barra de força.
 
         Args:
             tela (pygame.Surface): onde desenhar.
@@ -139,37 +111,19 @@ class Taco:
             rect_pano (pygame.Rect): área do pano, para achar a tabela.
         """
         d = self.direcao(bola_branca, pos_mouse)
-        alvo, t_bola = self.primeira_bola_no_caminho(bola_branca, d, bolas)
-        t_tabela = self.distancia_ate_tabela(bola_branca, d, rect_pano)
+        ponto, alvo = self.achar_contato(bola_branca, d, bolas, rect_pano)
 
-        # Se a tabela vem antes de qualquer bola, a mira para na tabela
-        if alvo is None or t_tabela < t_bola:
-            alvo = None
-            t = t_tabela
-        else:
-            t = t_bola
+        # 1) Linha da branca até o ponto de contato + círculo vazado
+        pygame.draw.line(tela, BRANCO, bola_branca.pos, ponto, 2)
+        pygame.draw.circle(tela, BRANCO, ponto, bola_branca.raio, 2)
 
-        # Posição da "bola fantasma": onde a branca estará no momento do choque
-        fantasma = bola_branca.pos + d * t
-
-        # 1) Linha da branca até a bola fantasma + o círculo vazado
-        pygame.draw.line(tela, BRANCO, bola_branca.pos, fantasma, 2)
-        pygame.draw.circle(tela, BRANCO, fantasma, bola_branca.raio, 2)
-
+        # 2) Se vai bater numa bola, mostra para onde ela vai.
+        #    Regra da sinuca: a bola atingida segue a reta que sai do
+        #    círculo e passa pelo centro dela. Então só "esticamos" essa reta.
         if alvo is not None:
-            # "normal" = direção do centro da fantasma até o centro do alvo.
-            # É exatamente para lá que a bola atingida vai.
-            normal = (alvo.pos - fantasma).normalize()
-
-            # 2) Linha que sai da bola atingida
-            pygame.draw.line(tela, BRANCO, alvo.pos, alvo.pos + normal * self.tamanho_mira, 2)
-
-            # 3) Desvio da branca: tiramos de d a parte que foi para o alvo.
-            #    O que sobra é perpendicular à normal (regra das bolas iguais).
-            desvio = d - normal * d.dot(normal)
-            if desvio.length() > 0.01:
-                desvio = desvio.normalize() * (self.tamanho_mira * 0.5)
-                pygame.draw.line(tela, BRANCO, fantasma, fantasma + desvio, 2)
+            seta = alvo.pos - ponto                  # do círculo até o centro da bola
+            fim = alvo.pos + seta * self.tamanho_mira
+            pygame.draw.line(tela, BRANCO, alvo.pos, fim, 2)
 
         # O taco fica do lado oposto da mira e recua conforme a força
         recuo = 15 + self.forca * 3
